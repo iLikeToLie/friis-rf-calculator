@@ -1,0 +1,77 @@
+FRIIS RF LINK & INTERFERENCE CALCULATOR
+VERSION HISTORY
+
+Maintenance rule:
+Add one entry for every released workbook version. Record the version, file name,
+release date, primary function, key changes, and any important limitations.
+
+-------------------------------------------------------------------------------
+Version 1
+File: Friis_RF_Link_and_Interference_Calculator.xlsx
+Date: 2026-07-29
+
+Function:
+Preliminary free-space RF link-budget and interference-screening calculator.
+
+Key changes:
+- Added the main Friis calculator with received power, FSPL, sensitivity margin,
+  interference-threshold margin, and screening status.
+- Added a distance sweep with received-power and threshold curves.
+- Added a ten-scenario antenna-placement comparison.
+- Added instructions, equations, definitions, and model limitations.
+
+-------------------------------------------------------------------------------
+Version 2
+File: Friis_RF_Link_and_Interference_Calculator_v2.xlsx
+Date: 2026-07-29
+
+Function:
+Extended the calculator with antenna-gain sensitivity analysis.
+
+Key changes:
+- Added Gain Plot with a Tx/Rx gain sweep selector.
+- Added minimum gain, maximum gain, and gain-step controls.
+- Added three editable comparison distances and corresponding power curves.
+- Retained formula-driven sensitivity and interference-threshold references.
+
+-------------------------------------------------------------------------------
+Version 3
+File: Friis_RF_Link_and_Interference_Calculator_v3.xlsx
+Date: 2026-07-29
+
+Function:
+Corrected Gain Plot chart labeling.
+
+Key changes:
+- Removed static distance text from chart-series names.
+- Standardized the legend to Curve 1, Curve 2, and Curve 3.
+- Kept the actual editable comparison distances visible in the sheet controls.
+
+-------------------------------------------------------------------------------
+Version 4
+File: Friis_RF_Link_and_Interference_Calculator_v4.xlsx
+Date: 2026-07-30
+
+Function:
+Added native Excel 1D antenna-pattern and off-axis directional-gain modelling.
+
+Key changes:
+- Added Antenna Setup with Manual gain, Manual off-axis, and Geometry-derived
+  gain-source modes for Tx and Rx.
+- Added local-coordinate geometry for path bearing, elevation, and off-axis angles.
+- Added editable Tx/Rx horizontal and vertical 1D pattern tables.
+- Added linear pattern interpolation in dB without extrapolation.
+- Added Horizontal only, Vertical only, and explicit H + V approximation modes.
+- Added Pattern View with selectable antenna/plane and a pattern-cut chart.
+- Integrated active directional gains into Calculator and Distance Plot.
+- Updated Gain Plot so the swept value replaces one active directional gain while
+  the other remains fixed.
+- Added optional active-pattern gains to Placement Comparison.
+- Expanded instructions, warnings, conventions, and limitations.
+- Preserved Version 3 results when both antennas remain in Manual gain mode.
+
+Important limitation:
+The included antenna patterns are illustrative placeholders. Replace them with
+manufacturer or measured data before using pattern-derived results for engineering
+decisions. The model uses 1D cuts, not a full 2D or 3D radiation pattern.
+
