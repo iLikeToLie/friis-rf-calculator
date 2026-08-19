@@ -118,7 +118,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><Signal size={24} /></div><div><strong>Friis RF</strong><span>Planner</span></div></div>
-        <span className="version-chip">WEB 1.1 · BASED ON V3</span>
+        <span className="version-chip">WEB 1.2 · BASED ON V3</span>
         <nav>{nav.map(([id, Icon, label]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
         <div className="sidebar-note"><Activity size={18} /><p><b>Screening model</b><br />Free-space estimates support engineering review; they do not prove harmful interference.</p></div>
         <a className="repo-link" href={REPO_URL} target="_blank" rel="noreferrer"><Github size={18} /> View repository</a>
@@ -152,6 +152,7 @@ function CalculatorView({ state, setState, setInput, result }: { state: AppState
   const setObjective = (linkObjective: LinkObjective) => setState((current) => ({ ...current, linkObjective }));
   return (
     <div className="calculator-layout">
+      <LinkSchematic state={state} result={result} />
       <section className="panel inputs-panel">
         <div className="panel-heading"><div><p className="eyebrow">MODEL INPUTS</p><h2>{state.inputs.scenarioName || 'Untitled scenario'}</h2></div><StatusBadge status={result.status} /></div>
         <div className="objective-selector">
@@ -172,6 +173,80 @@ function CalculatorView({ state, setState, setInput, result }: { state: AppState
         <div className="callout"><b>{state.linkObjective === 'desired' ? 'Desired communication mode' : 'Interference avoidance mode'}</b><p>{state.linkObjective === 'desired' ? 'Status is based on receiver sensitivity and the fade-margin target. The interference threshold remains visible for reference but does not penalize a strong intended signal.' : 'Status is based on the interference screening threshold. A positive interference margin means predicted power is below that limit.'}</p></div>
       </aside>
     </div>
+  );
+}
+
+function LinkSchematic({ state, result }: { state: AppState; result: ReturnType<typeof calculateLink> }) {
+  const tone = result.status === 'Acceptable link' || result.status === 'Below interference threshold'
+    ? 'good'
+    : result.status === 'Weak link'
+      ? 'warning'
+      : result.status === 'Invalid input'
+        ? 'neutral'
+        : 'danger';
+  const received = result.receivedPowerDbm;
+  const powerValues = [received, state.inputs.sensitivityDbm, state.inputs.interferenceThresholdDbm].filter(Number.isFinite);
+  const scaleMin = powerValues.length ? Math.floor(Math.min(...powerValues) - 10) : -120;
+  const scaleMax = powerValues.length ? Math.ceil(Math.max(...powerValues) + 10) : 0;
+  const powerPosition = (value: number) => Number.isFinite(value) && scaleMax > scaleMin
+    ? Math.max(0, Math.min(100, ((value - scaleMin) / (scaleMax - scaleMin)) * 100))
+    : 0;
+  const rxPosition = powerPosition(received);
+  const sensitivityPosition = powerPosition(state.inputs.sensitivityDbm);
+  const thresholdPosition = powerPosition(state.inputs.interferenceThresholdDbm);
+
+  return (
+    <section className={`panel link-schematic link-tone-${tone}`} aria-label="Dynamic transmitter to receiver link graphic">
+      <div className="panel-heading schematic-heading">
+        <div><p className="eyebrow">LIVE LINK VIEW</p><h2>{state.inputs.scenarioName || 'Untitled scenario'}</h2></div>
+        <div className="schematic-status"><span>{state.linkObjective === 'desired' ? 'Desired communication' : 'Interference avoidance'}</span><StatusBadge status={result.status} /></div>
+      </div>
+
+      <div className="link-stage">
+        <div className="radio-endpoint tx-endpoint">
+          <div className="endpoint-icon"><Antenna size={32} strokeWidth={1.7} /><span className="antenna-pulse pulse-one" /><span className="antenna-pulse pulse-two" /></div>
+          <span className="endpoint-role">TRANSMITTER</span>
+          <strong>{state.inputs.txId || 'Tx'}</strong>
+          <div className="endpoint-stats"><span><b>{formatNumber(state.inputs.transmitPowerDbm)}</b> dBm output</span><span><b>{formatNumber(state.inputs.txGainDbi)}</b> dBi gain</span></div>
+          <div className="endpoint-loss">Cable & connector loss <b>{formatNumber(state.inputs.txLossDb)} dB</b></div>
+        </div>
+
+        <div className="propagation-path">
+          <div className="distance-readout"><span>Tx-to-Rx distance</span><strong>{formatNumber(state.inputs.distanceM, state.inputs.distanceM < 100 ? 1 : 0)} m</strong></div>
+          <div className="signal-lane">
+            <span className="beam-cone beam-from-tx" />
+            <span className="signal-line" />
+            <span className="signal-packet packet-one" />
+            <span className="signal-packet packet-two" />
+            <span className="signal-packet packet-three" />
+            <span className="beam-cone beam-into-rx" />
+          </div>
+          <div className="path-summary"><span>FSPL <b>{formatNumber(result.fsplDb)} dB</b></span><span>Frequency <b>{formatNumber(state.inputs.frequencyGhz, 3)} GHz</b></span><span>Total loss <b>{formatNumber(result.totalLossDb)} dB</b></span></div>
+          <div className="path-losses"><span>Polarization <b>{formatNumber(state.inputs.polarizationLossDb)} dB</b></span><span>Environment <b>{formatNumber(state.inputs.obstructionLossDb)} dB</b></span><span>Other <b>{formatNumber(state.inputs.otherLossDb)} dB</b></span></div>
+        </div>
+
+        <div className="receiver-stack">
+          <div className="radio-endpoint rx-endpoint">
+            <div className="endpoint-icon"><Antenna size={32} strokeWidth={1.7} /></div>
+            <span className="endpoint-role">RECEIVER</span>
+            <strong>{state.inputs.rxId || 'Rx'}</strong>
+            <div className="endpoint-stats"><span><b>{formatNumber(result.receivedPowerDbm)}</b> dBm received</span><span><b>{formatNumber(state.inputs.rxGainDbi)}</b> dBi gain</span></div>
+            <div className="endpoint-loss">Cable & connector loss <b>{formatNumber(state.inputs.rxLossDb)} dB</b></div>
+          </div>
+          <div className="power-meter">
+            <div className="meter-title"><span>Rx power meter</span><b>{formatNumber(result.receivedPowerDbm)} dBm</b></div>
+            <div className="meter-track">
+              <span className="meter-fill" style={{ width: `${rxPosition}%` }} />
+              <span className="meter-needle" style={{ left: `${rxPosition}%` }} />
+              <span className="meter-marker sensitivity-marker" style={{ left: `${sensitivityPosition}%` }} title={`Sensitivity ${state.inputs.sensitivityDbm} dBm`} />
+              <span className="meter-marker threshold-marker" style={{ left: `${thresholdPosition}%` }} title={`Interference threshold ${state.inputs.interferenceThresholdDbm} dBm`} />
+            </div>
+            <div className="meter-scale"><span>{scaleMin} dBm</span><span>{scaleMax} dBm</span></div>
+            <div className="threshold-key"><span className="sensitivity-key">Sensitivity <b>{formatNumber(state.inputs.sensitivityDbm)} dBm</b></span><span className="threshold-key-item">Interference <b>{formatNumber(state.inputs.interferenceThresholdDbm)} dBm</b></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -217,7 +292,7 @@ function PlacementView({ state, setState }: { state: AppState; setState: React.D
 }
 
 function GuideView() {
-  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.1 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.1 adds separate decision logic for intended links and interference avoidance. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; weak when above sensitivity but short of that target; no link when below sensitivity.</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; below threshold otherwise.</li><li>The objective changes status interpretation only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
+  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.2 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.2 adds a live Tx-to-Rx link view with endpoint, propagation-loss, threshold, and received-power information. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; weak when above sensitivity but short of that target; no link when below sensitivity.</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; below threshold otherwise.</li><li>The objective changes status interpretation only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
 }
 
 export default App;

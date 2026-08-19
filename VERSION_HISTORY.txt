@@ -116,3 +116,27 @@ Key changes:
 Important limitation:
 The desired-link mode uses link margin versus sensitivity, not true SNR. True SNR
 would require receiver noise-floor information or bandwidth and noise figure.
+
+-------------------------------------------------------------------------------
+Web Version 1.2 (based on workbook Version 3)
+Deployment: https://iliketolie.github.io/friis-rf-calculator/
+Date: 2026-08-19
+
+Function:
+Added a live visual representation of the calculated Tx-to-Rx link.
+
+Key changes:
+- Added dynamic Tx and Rx antenna endpoints with identifiers, power, and gain.
+- Added the calculated Tx-to-Rx distance, FSPL, frequency, and total link loss.
+- Added endpoint cable losses and path-level polarization, environmental, and
+  miscellaneous losses.
+- Added stylized antenna beams and animated signal packets whose colour follows
+  the selected objective and resulting status.
+- Added receiver sensitivity and interference-threshold markers beside a dynamic
+  received-power meter.
+- Added responsive horizontal navigation for the link graphic on small screens.
+- Preserved all Version 1.1 calculations and objective logic.
+
+Calculation scope:
+Version 1.2 is a visual enhancement and does not change the Version 1.1 RF power
+or objective-status calculations.
