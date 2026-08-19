@@ -2,8 +2,8 @@ FRIIS RF LINK & INTERFERENCE CALCULATOR
 VERSION HISTORY
 
 Maintenance rule:
-Add one entry for every released workbook version. Record the version, file name,
-release date, primary function, key changes, and any important limitations.
+Add one entry for every released workbook or web version. Record the version,
+file or deployment, release date, primary function, key changes, and limitations.
 
 -------------------------------------------------------------------------------
 Version 1
@@ -75,3 +75,22 @@ The included antenna patterns are illustrative placeholders. Replace them with
 manufacturer or measured data before using pattern-derived results for engineering
 decisions. The model uses 1D cuts, not a full 2D or 3D radiation pattern.
 
+-------------------------------------------------------------------------------
+Web Version 1 (based on workbook Version 3)
+Deployment: https://iliketolie.github.io/friis-rf-calculator/
+Date: 2026-08-19
+
+Function:
+Responsive browser version of the Version 3 calculator for GitHub Pages.
+
+Key changes:
+- Converted the Version 3 Friis calculations into a tested TypeScript engine.
+- Added web views for the main calculator, distance sweep, Tx/Rx gain sweep, and
+  editable placement comparison.
+- Made all three gain-curve distances dynamic in controls and chart legends.
+- Added device-local autosave, JSON scenario import/export, and reset controls.
+- Added an automated GitHub Pages build, test, and deployment workflow.
+
+Important limitation:
+The web version follows workbook Version 3 and therefore does not include Version 4
+antenna-pattern, geometry-derived off-axis, or directional-gain features.
