@@ -4,7 +4,7 @@ import { calculateLink, calculatePlacements, distanceSweep, gainSweep } from './
 
 describe('Version 3 workbook parity', () => {
   it('matches the default calculator results', () => {
-    const result = calculateLink(DEFAULT_STATE.inputs);
+    const result = calculateLink(DEFAULT_STATE.inputs, 'avoidance');
     expect(result.wavelengthM).toBeCloseTo(0.05168835482758621, 12);
     expect(result.fsplDb).toBeCloseTo(101.68795995797917, 10);
     expect(result.totalLossDb).toBe(6.5);
@@ -29,14 +29,26 @@ describe('Version 3 workbook parity', () => {
     expect(point.receivedPowerDbm[2]).toBeCloseTo(-75.22915978453842, 10);
   });
 
-  it('matches placement power, margin, rank, and status', () => {
-    const rows = calculatePlacements(DEFAULT_STATE.inputs, DEFAULT_STATE.placements);
+  it('matches placement power, margins, and rank', () => {
+    const rows = calculatePlacements(DEFAULT_STATE.inputs, DEFAULT_STATE.placements, 'avoidance');
     expect(rows[0].receivedPowerDbm).toBeCloseTo(-39.667360044699564, 10);
     expect(rows[0].rank).toBe(1);
     expect(rows[0].status).toBe('Possible interference');
     expect(rows[3].rank).toBe(5);
-    expect(rows[3].status).toBe('Acceptable link');
-    expect(rows[4].status).toBe('Weak link');
+    expect(rows[3].status).toBe('Below interference threshold');
+    expect(rows[4].status).toBe('Below interference threshold');
     expect(rows[9].receivedPowerDbm).toBeCloseTo(-127.72915978453841, 10);
+  });
+
+  it('separates desired-link and interference-avoidance objectives', () => {
+    expect(calculateLink(DEFAULT_STATE.inputs, 'desired').status).toBe('Acceptable link');
+    expect(calculateLink(DEFAULT_STATE.inputs, 'avoidance').status).toBe('Possible interference');
+
+    const weak = { ...DEFAULT_STATE.inputs, transmitPowerDbm: -2 };
+    expect(calculateLink(weak, 'desired').status).toBe('Weak link');
+
+    const unavailable = { ...DEFAULT_STATE.inputs, transmitPowerDbm: -10 };
+    expect(calculateLink(unavailable, 'desired').status).toBe('No link');
+    expect(calculateLink(unavailable, 'avoidance').status).toBe('Below interference threshold');
   });
 });

@@ -1,4 +1,4 @@
-import type { DistanceSweepSettings, GainSweepSettings, LinkInputs, PlacementScenario, ScreeningStatus } from '../types';
+import type { DistanceSweepSettings, GainSweepSettings, LinkInputs, LinkObjective, PlacementScenario, ScreeningStatus } from '../types';
 
 export const SPEED_OF_LIGHT_MPS = 299_792_458;
 
@@ -38,17 +38,17 @@ export function totalLossDb(input: Pick<LinkInputs, 'txLossDb' | 'rxLossDb' | 'p
   return input.txLossDb + input.rxLossDb + input.polarizationLossDb + input.obstructionLossDb + input.otherLossDb;
 }
 
-export function screeningStatus(receivedPowerDbm: number, sensitivityDbm: number, interferenceThresholdDbm: number, fadeMarginTargetDb: number): ScreeningStatus {
+export function screeningStatus(receivedPowerDbm: number, sensitivityDbm: number, interferenceThresholdDbm: number, fadeMarginTargetDb: number, objective: LinkObjective = 'avoidance'): ScreeningStatus {
   if (!finite([receivedPowerDbm, sensitivityDbm, interferenceThresholdDbm, fadeMarginTargetDb])) return 'Invalid input';
-  if (receivedPowerDbm >= interferenceThresholdDbm) return 'Possible interference';
-  if (receivedPowerDbm >= sensitivityDbm) {
+  if (objective === 'desired') {
+    if (receivedPowerDbm < sensitivityDbm) return 'No link';
     return receivedPowerDbm - sensitivityDbm >= fadeMarginTargetDb ? 'Acceptable link' : 'Weak link';
   }
-  if (receivedPowerDbm < interferenceThresholdDbm) return 'Below interference threshold';
-  return 'Weak link';
+  if (receivedPowerDbm >= interferenceThresholdDbm) return 'Possible interference';
+  return 'Below interference threshold';
 }
 
-export function calculateLink(input: LinkInputs): LinkResult {
+export function calculateLink(input: LinkInputs, objective: LinkObjective = 'avoidance'): LinkResult {
   if (!isValidLinkInput(input)) {
     return { valid: false, wavelengthM: NaN, fsplDb: NaN, totalLossDb: NaN, receivedPowerDbm: NaN, receivedPowerMw: NaN, linkMarginDb: NaN, interferenceMarginDb: NaN, status: 'Invalid input' };
   }
@@ -64,7 +64,7 @@ export function calculateLink(input: LinkInputs): LinkResult {
     receivedPowerMw: 10 ** (power / 10),
     linkMarginDb: power - input.sensitivityDbm,
     interferenceMarginDb: input.interferenceThresholdDbm - power,
-    status: screeningStatus(power, input.sensitivityDbm, input.interferenceThresholdDbm, input.fadeMarginTargetDb),
+    status: screeningStatus(power, input.sensitivityDbm, input.interferenceThresholdDbm, input.fadeMarginTargetDb, objective),
   };
 }
 
@@ -101,7 +101,7 @@ export interface PlacementResult extends PlacementScenario {
   status: ScreeningStatus;
 }
 
-export function calculatePlacements(input: LinkInputs, rows: PlacementScenario[]): PlacementResult[] {
+export function calculatePlacements(input: LinkInputs, rows: PlacementScenario[], objective: LinkObjective = 'avoidance'): PlacementResult[] {
   const calculated = rows.map((row) => {
     const result = calculateLink({
       ...input,
@@ -113,7 +113,7 @@ export function calculatePlacements(input: LinkInputs, rows: PlacementScenario[]
       polarizationLossDb: row.polarizationLossDb,
       obstructionLossDb: row.obstructionLossDb,
       otherLossDb: row.otherLossDb,
-    });
+    }, objective);
     return {
       ...row,
       totalLossDb: result.totalLossDb,

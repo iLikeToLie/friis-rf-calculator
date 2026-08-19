@@ -9,7 +9,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { freshDefaultState } from './data/defaults';
 import { calculateLink, calculatePlacements, distanceSweep, formatNumber, gainSweep } from './lib/rf';
-import type { AppState, LinkInputs, PlacementScenario, ScreeningStatus } from './types';
+import type { AppState, LinkInputs, LinkObjective, PlacementScenario, ScreeningStatus } from './types';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -18,10 +18,24 @@ const REPO_URL = 'https://github.com/iLikeToLie/friis-rf-calculator';
 const WORKBOOK_URL = `${REPO_URL}/raw/main/Friis_RF_Link_and_Interference_Calculator_v3.xlsx`;
 type View = 'calculator' | 'distance' | 'gain' | 'placement' | 'guide';
 
+function normalizeState(saved?: Partial<AppState>): AppState {
+  const defaults = freshDefaultState();
+  if (!saved) return defaults;
+  return {
+    ...defaults,
+    ...saved,
+    linkObjective: saved.linkObjective === 'avoidance' ? 'avoidance' : 'desired',
+    inputs: { ...defaults.inputs, ...saved.inputs },
+    distanceSweep: { ...defaults.distanceSweep, ...saved.distanceSweep },
+    gainSweep: { ...defaults.gainSweep, ...saved.gainSweep },
+    placements: Array.isArray(saved.placements) ? saved.placements : defaults.placements,
+  };
+}
+
 function loadState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? { ...freshDefaultState(), ...JSON.parse(saved) } : freshDefaultState();
+    return saved ? normalizeState(JSON.parse(saved) as Partial<AppState>) : freshDefaultState();
   } catch {
     return freshDefaultState();
   }
@@ -66,7 +80,7 @@ function App() {
   const [view, setView] = useState<View>('calculator');
   const [savedFlash, setSavedFlash] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
-  const result = useMemo(() => calculateLink(state.inputs), [state.inputs]);
+  const result = useMemo(() => calculateLink(state.inputs, state.linkObjective), [state.inputs, state.linkObjective]);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }, [state]);
 
@@ -89,7 +103,7 @@ function App() {
     try {
       const imported = JSON.parse(await file.text()) as AppState;
       if (!imported.inputs || !imported.distanceSweep || !imported.gainSweep || !Array.isArray(imported.placements)) throw new Error('Invalid scenario');
-      setState(imported);
+      setState(normalizeState(imported));
     } catch {
       window.alert('This file is not a valid Friis RF Planner scenario.');
     }
@@ -104,7 +118,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><Signal size={24} /></div><div><strong>Friis RF</strong><span>Planner</span></div></div>
-        <span className="version-chip">WEB · BASED ON V3</span>
+        <span className="version-chip">WEB 1.1 · BASED ON V3</span>
         <nav>{nav.map(([id, Icon, label]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
         <div className="sidebar-note"><Activity size={18} /><p><b>Screening model</b><br />Free-space estimates support engineering review; they do not prove harmful interference.</p></div>
         <a className="repo-link" href={REPO_URL} target="_blank" rel="noreferrer"><Github size={18} /> View repository</a>
@@ -123,7 +137,7 @@ function App() {
         </header>
 
         <div className="content">
-          {view === 'calculator' && <CalculatorView state={state} setInput={setInput} result={result} />}
+          {view === 'calculator' && <CalculatorView state={state} setState={setState} setInput={setInput} result={result} />}
           {view === 'distance' && <DistanceView state={state} setState={setState} />}
           {view === 'gain' && <GainView state={state} setState={setState} />}
           {view === 'placement' && <PlacementView state={state} setState={setState} />}
@@ -134,11 +148,19 @@ function App() {
   );
 }
 
-function CalculatorView({ state, setInput, result }: { state: AppState; setInput: <K extends keyof LinkInputs>(key: K, value: LinkInputs[K]) => void; result: ReturnType<typeof calculateLink> }) {
+function CalculatorView({ state, setState, setInput, result }: { state: AppState; setState: React.Dispatch<React.SetStateAction<AppState>>; setInput: <K extends keyof LinkInputs>(key: K, value: LinkInputs[K]) => void; result: ReturnType<typeof calculateLink> }) {
+  const setObjective = (linkObjective: LinkObjective) => setState((current) => ({ ...current, linkObjective }));
   return (
     <div className="calculator-layout">
       <section className="panel inputs-panel">
         <div className="panel-heading"><div><p className="eyebrow">MODEL INPUTS</p><h2>{state.inputs.scenarioName || 'Untitled scenario'}</h2></div><StatusBadge status={result.status} /></div>
+        <div className="objective-selector">
+          <div><span>Link objective</span><p>{state.linkObjective === 'desired' ? 'Tx and Rx should communicate. Received power above sensitivity with the required fade margin is desirable.' : 'Tx and Rx should remain isolated. Received power below the interference threshold is desirable.'}</p></div>
+          <div className="objective-toggle" role="group" aria-label="Link objective">
+            <button className={state.linkObjective === 'desired' ? 'active' : ''} onClick={() => setObjective('desired')}><Signal size={16} /> Desired communication</button>
+            <button className={state.linkObjective === 'avoidance' ? 'active' : ''} onClick={() => setObjective('avoidance')}><Antenna size={16} /> Interference avoidance</button>
+          </div>
+        </div>
         <div className="form-section"><h3>Scenario</h3><div className="form-grid three"><TextField label="Scenario or link name" value={state.inputs.scenarioName} onChange={(value) => setInput('scenarioName', value)} /><TextField label="Tx location / identifier" value={state.inputs.txId} onChange={(value) => setInput('txId', value)} /><TextField label="Rx location / identifier" value={state.inputs.rxId} onChange={(value) => setInput('rxId', value)} /></div></div>
         <div className="form-section"><h3>Signal and geometry</h3><div className="form-grid four"><NumberField label="Transmit power" value={state.inputs.transmitPowerDbm} unit="dBm" onChange={(value) => setInput('transmitPowerDbm', value)} help="Transmitter output before Tx loss" /><NumberField label="Operating frequency" value={state.inputs.frequencyGhz} unit="GHz" min={0.000001} onChange={(value) => setInput('frequencyGhz', value)} /><NumberField label="Tx-to-Rx distance" value={state.inputs.distanceM} unit="m" min={0.000001} onChange={(value) => setInput('distanceM', value)} /><NumberField label="Fade margin target" value={state.inputs.fadeMarginTargetDb} unit="dB" min={0} onChange={(value) => setInput('fadeMarginTargetDb', value)} /></div></div>
         <div className="form-section"><h3>Antenna gain and losses</h3><div className="form-grid four"><NumberField label="Tx antenna gain" value={state.inputs.txGainDbi} unit="dBi" onChange={(value) => setInput('txGainDbi', value)} help="Gain toward the receiver" /><NumberField label="Rx antenna gain" value={state.inputs.rxGainDbi} unit="dBi" onChange={(value) => setInput('rxGainDbi', value)} help="Gain toward the transmitter" /><NumberField label="Tx cable & connector loss" value={state.inputs.txLossDb} unit="dB" min={0} onChange={(value) => setInput('txLossDb', value)} /><NumberField label="Rx cable & connector loss" value={state.inputs.rxLossDb} unit="dB" min={0} onChange={(value) => setInput('rxLossDb', value)} /><NumberField label="Polarization mismatch" value={state.inputs.polarizationLossDb} unit="dB" min={0} onChange={(value) => setInput('polarizationLossDb', value)} /><NumberField label="Obstruction / environment" value={state.inputs.obstructionLossDb} unit="dB" min={0} onChange={(value) => setInput('obstructionLossDb', value)} /><NumberField label="Other miscellaneous loss" value={state.inputs.otherLossDb} unit="dB" min={0} onChange={(value) => setInput('otherLossDb', value)} /></div></div>
@@ -147,7 +169,7 @@ function CalculatorView({ state, setInput, result }: { state: AppState; setInput
       <aside className="results-column">
         <section className="result-hero"><p className="eyebrow">PREDICTED RECEIVED POWER</p><div className="power-value">{formatNumber(result.receivedPowerDbm, 2)} <span>dBm</span></div><p>{state.inputs.txId || 'Transmitter'} → {state.inputs.rxId || 'Receiver'}</p><StatusBadge status={result.status} /></section>
         <div className="metric-grid"><Metric label="Link margin" value={formatNumber(result.linkMarginDb)} unit="dB" note="Power above sensitivity" /><Metric label="Interference margin" value={formatNumber(result.interferenceMarginDb)} unit="dB" note="Threshold minus received power" /><Metric label="Free-space path loss" value={formatNumber(result.fsplDb)} unit="dB" /><Metric label="Total system losses" value={formatNumber(result.totalLossDb)} unit="dB" /><Metric label="Wavelength" value={formatNumber(result.wavelengthM, 4)} unit="m" /><Metric label="Received power" value={result.receivedPowerMw < 0.001 ? result.receivedPowerMw.toExponential(3) : formatNumber(result.receivedPowerMw, 6)} unit="mW" /></div>
-        <div className="callout"><b>Reading the margins</b><p>A positive link margin is above receiver sensitivity. A negative interference margin means predicted power exceeds your screening threshold.</p></div>
+        <div className="callout"><b>{state.linkObjective === 'desired' ? 'Desired communication mode' : 'Interference avoidance mode'}</b><p>{state.linkObjective === 'desired' ? 'Status is based on receiver sensitivity and the fade-margin target. The interference threshold remains visible for reference but does not penalize a strong intended signal.' : 'Status is based on the interference screening threshold. A positive interference margin means predicted power is below that limit.'}</p></div>
       </aside>
     </div>
   );
@@ -189,13 +211,13 @@ function SimpleSweepTable({ headers, rows, total }: { headers: string[]; rows: s
 }
 
 function PlacementView({ state, setState }: { state: AppState; setState: React.Dispatch<React.SetStateAction<AppState>> }) {
-  const rows = useMemo(() => calculatePlacements(state.inputs, state.placements), [state.inputs, state.placements]);
+  const rows = useMemo(() => calculatePlacements(state.inputs, state.placements, state.linkObjective), [state.inputs, state.placements, state.linkObjective]);
   const update = (id: string, key: keyof PlacementScenario, value: string | number) => setState((current) => ({ ...current, placements: current.placements.map((row) => row.id === id ? { ...row, [key]: value } : row) }));
-  return <section className="panel placement-panel"><div className="panel-heading"><div><p className="eyebrow">PLACEMENT COMPARISON</p><h2>Compare candidate sites</h2><p className="muted">Uses the calculator's transmit power, frequency, thresholds, and fade target. Each row supplies its own gains, distance, and losses.</p></div><span className="version-chip">{rows.length} SCENARIOS</span></div><div className="table-scroll"><table className="placement-table"><thead><tr><th>Rank</th><th>Scenario</th><th>Distance (m)</th><th>Tx gain</th><th>Rx gain</th><th>Tx loss</th><th>Rx loss</th><th>Pol.</th><th>Obstr.</th><th>Other</th><th>Total loss</th><th>Power (dBm)</th><th>Link margin</th><th>Interference margin</th><th>Status</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><span className="rank">{row.rank || '—'}</span></td><td><input aria-label="Scenario name" value={row.name} onChange={(e) => update(row.id, 'name', e.target.value)} /></td>{(['distanceM','txGainDbi','rxGainDbi','txLossDb','rxLossDb','polarizationLossDb','obstructionLossDb','otherLossDb'] as const).map((key) => <td key={key}><input aria-label={key} type="number" value={row[key]} onChange={(e) => update(row.id, key, Number(e.target.value))} /></td>)}<td>{formatNumber(row.totalLossDb)}</td><td className="emphasis">{formatNumber(row.receivedPowerDbm)}</td><td>{formatNumber(row.linkMarginDb)}</td><td>{formatNumber(row.interferenceMarginDb)}</td><td><StatusBadge status={row.status} /></td></tr>)}</tbody></table></div></section>;
+  return <section className="panel placement-panel"><div className="panel-heading"><div><p className="eyebrow">PLACEMENT COMPARISON</p><h2>Compare candidate sites</h2><p className="muted">Uses the calculator's transmit power, frequency, thresholds, fade target, and <b>{state.linkObjective === 'desired' ? 'desired communication' : 'interference avoidance'}</b> objective. Each row supplies its own gains, distance, and losses.</p></div><span className="version-chip">{rows.length} SCENARIOS</span></div><div className="table-scroll"><table className="placement-table"><thead><tr><th>Rank</th><th>Scenario</th><th>Distance (m)</th><th>Tx gain</th><th>Rx gain</th><th>Tx loss</th><th>Rx loss</th><th>Pol.</th><th>Obstr.</th><th>Other</th><th>Total loss</th><th>Power (dBm)</th><th>Link margin</th><th>Interference margin</th><th>Status</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><span className="rank">{row.rank || '—'}</span></td><td><input aria-label="Scenario name" value={row.name} onChange={(e) => update(row.id, 'name', e.target.value)} /></td>{(['distanceM','txGainDbi','rxGainDbi','txLossDb','rxLossDb','polarizationLossDb','obstructionLossDb','otherLossDb'] as const).map((key) => <td key={key}><input aria-label={key} type="number" value={row[key]} onChange={(e) => update(row.id, key, Number(e.target.value))} /></td>)}<td>{formatNumber(row.totalLossDb)}</td><td className="emphasis">{formatNumber(row.receivedPowerDbm)}</td><td>{formatNumber(row.linkMarginDb)}</td><td>{formatNumber(row.interferenceMarginDb)}</td><td><StatusBadge status={row.status} /></td></tr>)}</tbody></table></div></section>;
 }
 
 function GuideView() {
-  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Interpretation</h3><ul className="guide-list"><li><b>Possible interference:</b> predicted power is at or above the screening threshold.</li><li><b>Acceptable link:</b> below the interference threshold, above sensitivity, and meets the fade target.</li><li><b>Weak link:</b> above sensitivity but short of the fade target.</li><li><b>Below interference threshold:</b> below both sensitivity and the screening threshold.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
+  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.1 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.1 adds separate decision logic for intended links and interference avoidance. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; weak when above sensitivity but short of that target; no link when below sensitivity.</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; below threshold otherwise.</li><li>The objective changes status interpretation only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
 }
 
 export default App;

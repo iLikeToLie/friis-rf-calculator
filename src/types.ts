@@ -2,8 +2,11 @@ export type ScreeningStatus =
   | 'Possible interference'
   | 'Acceptable link'
   | 'Weak link'
+  | 'No link'
   | 'Below interference threshold'
   | 'Invalid input';
+
+export type LinkObjective = 'desired' | 'avoidance';
 
 export interface LinkInputs {
   scenarioName: string;
@@ -52,6 +55,7 @@ export interface PlacementScenario {
 }
 
 export interface AppState {
+  linkObjective: LinkObjective;
   inputs: LinkInputs;
   distanceSweep: DistanceSweepSettings;
   gainSweep: GainSweepSettings;

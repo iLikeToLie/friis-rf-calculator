@@ -94,3 +94,25 @@ Key changes:
 Important limitation:
 The web version follows workbook Version 3 and therefore does not include Version 4
 antenna-pattern, geometry-derived off-axis, or directional-gain features.
+
+-------------------------------------------------------------------------------
+Web Version 1.1 (based on workbook Version 3)
+Deployment: https://iliketolie.github.io/friis-rf-calculator/
+Date: 2026-08-19
+
+Function:
+Separated intended-link assessment from interference-avoidance screening.
+
+Key changes:
+- Added a Link objective toggle with Desired communication and Interference
+  avoidance modes.
+- Desired communication status now uses receiver sensitivity and fade-margin
+  target without penalizing a strong intended signal as interference.
+- Interference avoidance status now uses the interference screening threshold.
+- Applied the selected objective to the main calculator and placement comparison.
+- Added migration for existing browser-saved and exported Version 1 scenarios.
+- Added automated tests covering both objective modes.
+
+Important limitation:
+The desired-link mode uses link margin versus sensitivity, not true SNR. True SNR
+would require receiver noise-floor information or bandwidth and noise figure.

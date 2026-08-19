@@ -14,6 +14,7 @@ const placementRows: Omit<PlacementScenario, 'id'>[] = [
 ];
 
 export const DEFAULT_STATE: AppState = {
+  linkObjective: 'desired',
   inputs: {
     scenarioName: 'Campus Backhaul A',
     txId: 'Rooftop TX-01',
