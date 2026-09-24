@@ -45,6 +45,14 @@ function StatusBadge({ status }: { status: ScreeningStatus }) {
   return <span className={`status status-${status.toLowerCase().replaceAll(' ', '-')}`}>{status}</span>;
 }
 
+function statusTone(status: ScreeningStatus): 'good' | 'safe' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'Acceptable link') return 'good';
+  if (status === 'Below interference threshold') return 'safe';
+  if (status === 'Weak link') return 'warning';
+  if (status === 'Invalid input') return 'neutral';
+  return 'danger';
+}
+
 function NumberField({ label, value, unit, onChange, min, step = 'any', help }: {
   label: string; value: number; unit: string; onChange: (value: number) => void; min?: number; step?: number | 'any'; help?: string;
 }) {
@@ -118,7 +126,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><Signal size={22} /></div><div><strong>FRIIS RF</strong><span>LINK MISSION CONTROL</span></div></div>
-        <span className="version-chip">WEB 1.31 · V3 MODEL</span>
+        <span className="version-chip">WEB 1.31.1 · V3 MODEL</span>
         <nav>{nav.map(([id, Icon, label]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
         <div className="sidebar-note"><Activity size={18} /><p><b>Screening model</b><br />Free-space estimates support engineering review; they do not prove harmful interference.</p></div>
         <a className="repo-link" href={REPO_URL} target="_blank" rel="noreferrer"><Github size={18} /> View repository</a>
@@ -168,7 +176,7 @@ function CalculatorView({ state, setState, setInput, result }: { state: AppState
         <div className="form-section"><h3>Receiver thresholds</h3><div className="form-grid three"><NumberField label="Receiver sensitivity" value={state.inputs.sensitivityDbm} unit="dBm" onChange={(value) => setInput('sensitivityDbm', value)} /><NumberField label="Interference threshold" value={state.inputs.interferenceThresholdDbm} unit="dBm" onChange={(value) => setInput('interferenceThresholdDbm', value)} /></div></div>
       </section>
       <aside className="results-column">
-        <section className="result-hero"><p className="eyebrow">PREDICTED RECEIVED POWER</p><div className="power-value">{formatNumber(result.receivedPowerDbm, 2)} <span>dBm</span></div><p>{state.inputs.txId || 'Transmitter'} → {state.inputs.rxId || 'Receiver'}</p><StatusBadge status={result.status} /></section>
+        <section className={`result-hero result-tone-${statusTone(result.status)}`}><p className="eyebrow">PREDICTED RECEIVED POWER</p><div className="power-value">{formatNumber(result.receivedPowerDbm, 2)} <span>dBm</span></div><p>{state.inputs.txId || 'Transmitter'} → {state.inputs.rxId || 'Receiver'}</p><StatusBadge status={result.status} /></section>
         <div className="metric-grid"><Metric label="Link margin" value={formatNumber(result.linkMarginDb)} unit="dB" note="Power above sensitivity" /><Metric label="Interference margin" value={formatNumber(result.interferenceMarginDb)} unit="dB" note="Threshold minus received power" /><Metric label="Free-space path loss" value={formatNumber(result.fsplDb)} unit="dB" /><Metric label="Total system losses" value={formatNumber(result.totalLossDb)} unit="dB" /><Metric label="Wavelength" value={formatNumber(result.wavelengthM, 4)} unit="m" /><Metric label="Received power" value={result.receivedPowerMw < 0.001 ? result.receivedPowerMw.toExponential(3) : formatNumber(result.receivedPowerMw, 6)} unit="mW" /></div>
         <div className="callout"><b>{state.linkObjective === 'desired' ? 'Desired communication mode' : 'Interference avoidance mode'}</b><p>{state.linkObjective === 'desired' ? 'Status is based on receiver sensitivity and the fade-margin target. The interference threshold remains visible for reference but does not penalize a strong intended signal.' : 'Status is based on the interference screening threshold. A positive interference margin means predicted power is below that limit.'}</p></div>
       </aside>
@@ -177,13 +185,7 @@ function CalculatorView({ state, setState, setInput, result }: { state: AppState
 }
 
 function LinkSchematic({ state, result }: { state: AppState; result: ReturnType<typeof calculateLink> }) {
-  const tone = result.status === 'Acceptable link' || result.status === 'Below interference threshold'
-    ? 'good'
-    : result.status === 'Weak link'
-      ? 'warning'
-      : result.status === 'Invalid input'
-        ? 'neutral'
-        : 'danger';
+  const tone = statusTone(result.status);
   const received = result.receivedPowerDbm;
   const powerValues = [received, state.inputs.sensitivityDbm, state.inputs.interferenceThresholdDbm].filter(Number.isFinite);
   const scaleMin = powerValues.length ? Math.floor(Math.min(...powerValues) - 10) : -120;
@@ -292,7 +294,7 @@ function PlacementView({ state, setState }: { state: AppState; setState: React.D
 }
 
 function GuideView() {
-  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.31 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.31 introduces a science-forward mission-control interface with monospaced editorial typography, solar-amber emphasis, and instrument-style data surfaces. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; weak when above sensitivity but short of that target; no link when below sensitivity.</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; below threshold otherwise.</li><li>The objective changes status interpretation only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
+  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.31.1 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.31.1 uses a science-forward mission-control interface with status-responsive link colours, monospaced editorial typography, and instrument-style data surfaces. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; weak when above sensitivity but short of that target; no link when below sensitivity.</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; below threshold otherwise.</li><li>The objective changes status interpretation only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
 }
 
 export default App;

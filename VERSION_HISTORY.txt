@@ -189,3 +189,24 @@ Key changes:
 Calculation scope:
 Version 1.31 is a visual and layout release. It does not change received-power,
 margin, sweep, placement-ranking, or objective-status calculations.
+
+-------------------------------------------------------------------------------
+Web Version 1.31.1 (based on workbook Version 3)
+Deployment: https://iliketolie.github.io/friis-rf-calculator/
+Date: 2026-09-24
+
+Function:
+Restored semantic status colouring to the live link and primary power result.
+
+Key changes:
+- The Tx-to-Rx animation now changes colour with the calculated status.
+- The predicted received-power panel uses the same status colour as the link.
+- Acceptable links use green, weak links use amber, no-link and possible-
+  interference states use red, below-threshold avoidance states use blue, and
+  invalid input uses neutral blue-gray.
+- Changed the selected link-objective control from amber to neutral navy so the
+  selector does not imply a weak or marginal link.
+
+Calculation scope:
+Version 1.31.1 changes presentation only. RF calculations and status thresholds
+are unchanged.
