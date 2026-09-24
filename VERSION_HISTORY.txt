@@ -210,3 +210,25 @@ Key changes:
 Calculation scope:
 Version 1.31.1 changes presentation only. RF calculations and status thresholds
 are unchanged.
+
+-------------------------------------------------------------------------------
+Web Version 1.31.2 (based on workbook Version 3)
+Deployment: https://iliketolie.github.io/friis-rf-calculator/
+Date: 2026-09-24
+
+Function:
+Made the receiver power meter reflect the selected link objective.
+
+Key changes:
+- Desired communication mode now displays receiver sensitivity and the required
+  receive level, calculated as sensitivity plus the fade-margin target.
+- Interference avoidance mode continues to display receiver sensitivity and the
+  interference threshold.
+- The second meter marker, label, value, tooltip, and scale now update immediately
+  when the objective changes.
+- Applied blue to sensitivity, green to required receive level, and red to the
+  interference threshold for clearer threshold semantics.
+
+Calculation scope:
+Version 1.31.2 changes the meter presentation only. It reuses the existing
+sensitivity, fade-margin target, and interference-threshold inputs.

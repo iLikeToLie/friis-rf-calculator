@@ -187,11 +187,13 @@ main { min-width: 0; }
 .meter-marker { position: absolute; top: -2px; width: 1px; height: 11px; }
 .sensitivity-marker { background: var(--yellow); }
 .threshold-marker { background: var(--red); }
+.required-marker { background: var(--green); }
 .meter-scale { color: var(--ash); font-size: 12px; }
 .threshold-key { margin-top: 8px; align-items: flex-start; }
 .threshold-key span { font-size: 12px; line-height: 1.35; }
 .threshold-key b { display: block; color: var(--body); }
 .sensitivity-key { color: var(--yellow); }
+.required-key { color: var(--green); text-align: right; }
 .threshold-key-item { color: var(--red); text-align: right; }
 
 @keyframes signal-travel { from { left: 2%; opacity: 0; } 8% { opacity: 1; } 90% { opacity: 1; } to { left: 96%; opacity: 0; } }
@@ -417,6 +419,9 @@ main { min-width: 0; }
 .meter-track { background: var(--canvas); border: 1px solid var(--hairline); }
 .meter-fill { background: linear-gradient(90deg, #4a3514, var(--link-accent)); }
 .sensitivity-marker { background: var(--blue); }
+.sensitivity-key { color: var(--blue); }
+.required-marker { background: var(--green); }
+.required-key { color: var(--green); text-align: right; }
 .threshold-marker { background: var(--red); }
 
 .objective-selector { background: var(--surface-elevated); border-color: var(--hairline); }

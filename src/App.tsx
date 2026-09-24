@@ -126,7 +126,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><Signal size={22} /></div><div><strong>FRIIS RF</strong><span>LINK MISSION CONTROL</span></div></div>
-        <span className="version-chip">WEB 1.31.1 · V3 MODEL</span>
+        <span className="version-chip">WEB 1.31.2 · V3 MODEL</span>
         <nav>{nav.map(([id, Icon, label]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={19} /><span>{label}</span></button>)}</nav>
         <div className="sidebar-note"><Activity size={18} /><p><b>Screening model</b><br />Free-space estimates support engineering review; they do not prove harmful interference.</p></div>
         <a className="repo-link" href={REPO_URL} target="_blank" rel="noreferrer"><Github size={18} /> View repository</a>
@@ -187,7 +187,13 @@ function CalculatorView({ state, setState, setInput, result }: { state: AppState
 function LinkSchematic({ state, result }: { state: AppState; result: ReturnType<typeof calculateLink> }) {
   const tone = statusTone(result.status);
   const received = result.receivedPowerDbm;
-  const powerValues = [received, state.inputs.sensitivityDbm, state.inputs.interferenceThresholdDbm].filter(Number.isFinite);
+  const requiredReceiveLevelDbm = state.inputs.sensitivityDbm + state.inputs.fadeMarginTargetDb;
+  const referenceValueDbm = state.linkObjective === 'desired' ? requiredReceiveLevelDbm : state.inputs.interferenceThresholdDbm;
+  const referenceLabel = state.linkObjective === 'desired' ? 'Required level' : 'Interference';
+  const referenceTitle = state.linkObjective === 'desired'
+    ? `Required receive level: sensitivity + ${state.inputs.fadeMarginTargetDb} dB fade margin`
+    : `Interference threshold ${state.inputs.interferenceThresholdDbm} dBm`;
+  const powerValues = [received, state.inputs.sensitivityDbm, referenceValueDbm].filter(Number.isFinite);
   const scaleMin = powerValues.length ? Math.floor(Math.min(...powerValues) - 10) : -120;
   const scaleMax = powerValues.length ? Math.ceil(Math.max(...powerValues) + 10) : 0;
   const powerPosition = (value: number) => Number.isFinite(value) && scaleMax > scaleMin
@@ -195,7 +201,7 @@ function LinkSchematic({ state, result }: { state: AppState; result: ReturnType<
     : 0;
   const rxPosition = powerPosition(received);
   const sensitivityPosition = powerPosition(state.inputs.sensitivityDbm);
-  const thresholdPosition = powerPosition(state.inputs.interferenceThresholdDbm);
+  const referencePosition = powerPosition(referenceValueDbm);
 
   return (
     <section className={`panel link-schematic link-tone-${tone}`} aria-label="Dynamic transmitter to receiver link graphic">
@@ -241,10 +247,10 @@ function LinkSchematic({ state, result }: { state: AppState; result: ReturnType<
               <span className="meter-fill" style={{ width: `${rxPosition}%` }} />
               <span className="meter-needle" style={{ left: `${rxPosition}%` }} />
               <span className="meter-marker sensitivity-marker" style={{ left: `${sensitivityPosition}%` }} title={`Sensitivity ${state.inputs.sensitivityDbm} dBm`} />
-              <span className="meter-marker threshold-marker" style={{ left: `${thresholdPosition}%` }} title={`Interference threshold ${state.inputs.interferenceThresholdDbm} dBm`} />
+              <span className={`meter-marker ${state.linkObjective === 'desired' ? 'required-marker' : 'threshold-marker'}`} style={{ left: `${referencePosition}%` }} title={referenceTitle} />
             </div>
             <div className="meter-scale"><span>{scaleMin} dBm</span><span>{scaleMax} dBm</span></div>
-            <div className="threshold-key"><span className="sensitivity-key">Sensitivity <b>{formatNumber(state.inputs.sensitivityDbm)} dBm</b></span><span className="threshold-key-item">Interference <b>{formatNumber(state.inputs.interferenceThresholdDbm)} dBm</b></span></div>
+            <div className="threshold-key"><span className="sensitivity-key">Sensitivity <b>{formatNumber(state.inputs.sensitivityDbm)} dBm</b></span><span className={state.linkObjective === 'desired' ? 'required-key' : 'threshold-key-item'} title={referenceTitle}>{referenceLabel} <b>{formatNumber(referenceValueDbm)} dBm</b></span></div>
           </div>
         </div>
       </div>
@@ -294,7 +300,7 @@ function PlacementView({ state, setState }: { state: AppState; setState: React.D
 }
 
 function GuideView() {
-  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.31.1 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.31.1 uses a science-forward mission-control interface with status-responsive link colours, monospaced editorial typography, and instrument-style data surfaces. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; weak when above sensitivity but short of that target; no link when below sensitivity.</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; below threshold otherwise.</li><li>The objective changes status interpretation only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
+  return <div className="guide-grid"><section className="panel guide-hero"><p className="eyebrow">WEB 1.31.2 · VERSION 3 MODEL</p><h2>How the calculator works</h2><p>The web app reproduces the Version 3 workbook's free-space link budget, distance sweep, selectable Tx/Rx gain sweep, and placement comparison. Web 1.31.2 uses a science-forward mission-control interface with status-responsive link colours and an objective-aware receiver meter. All calculations run locally in your browser.</p><a className="primary-button" href={WORKBOOK_URL}><FileDown size={18} /> Download the source workbook</a></section><section className="panel"><h3>Core equations</h3><div className="formula"><span>Free-space path loss</span><code>32.44 + 20 log₁₀(f MHz) + 20 log₁₀(d km)</code></div><div className="formula"><span>Received power</span><code>Pᵣ = Pₜ + Gₜ + Gᵣ − FSPL − total losses</code></div><div className="formula"><span>Link margin</span><code>Pᵣ − receiver sensitivity</code></div><div className="formula"><span>Interference margin</span><code>interference threshold − Pᵣ</code></div></section><section className="panel"><h3>Objective-based interpretation</h3><ul className="guide-list"><li><b>Desired communication:</b> acceptable when received power is above sensitivity by at least the fade target; the receiver meter shows sensitivity and the required receive level (sensitivity + fade-margin target).</li><li><b>Interference avoidance:</b> possible interference when predicted power meets or exceeds the screening threshold; the receiver meter shows sensitivity and the interference threshold.</li><li>The objective changes status interpretation and the relevant meter reference only. It does not change FSPL, received power, or either margin.</li></ul></section><section className="panel"><h3>Engineering limits</h3><p className="muted">Friis assumes free-space propagation and gains in the direction of the other antenna. Version 3 does not calculate antenna patterns, side-lobe coupling, terrain, diffraction, multipath, rain fade, Fresnel clearance, receiver bandwidth, duty cycle, true SNR, or aggregate interference. Add those effects as justified losses or use a dedicated propagation study.</p></section><section className="panel"><h3>Scenario files</h3><p className="muted">Changes auto-save only on this device. Export a JSON scenario to move it to another browser or keep a reviewed snapshot; importing replaces the current browser state.</p></section></div>;
 }
 
 export default App;

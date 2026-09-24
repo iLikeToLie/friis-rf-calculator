@@ -1,6 +1,6 @@
 # Friis RF Link & Interference Calculator
 
-A browser-based RF link-budget and interference-screening tool using the Friis free-space model. **Web Version 1.31.1** is based on **workbook Version 3** and presents its objective-based RF tools through a science-forward mission-control interface.
+A browser-based RF link-budget and interference-screening tool using the Friis free-space model. **Web Version 1.31.2** is based on **workbook Version 3** and presents its objective-based RF tools through a science-forward mission-control interface.
 
 **Live calculator:** [iliketolie.github.io/friis-rf-calculator](https://iliketolie.github.io/friis-rf-calculator/)
 
@@ -9,6 +9,7 @@ A browser-based RF link-budget and interference-screening tool using the Friis f
 - Main link-budget calculator with FSPL, wavelength, received power, total losses, link margin, interference-threshold margin, and screening status.
 - Link-objective toggle for **Desired communication** versus **Interference avoidance**, with status logic appropriate to each use case.
 - Dynamic Tx-to-Rx graphic with antenna symbols, stylized beams, distance, endpoint power and gain, cable losses, propagation losses, status animation, receiver thresholds, and an Rx power meter.
+- Objective-aware Rx meter: desired communication compares received power with sensitivity and the required receive level; interference avoidance compares it with sensitivity and the interference threshold.
 - Distance sweep with received-power, sensitivity, and interference-threshold curves.
 - Antenna-gain sweep with a Tx/Rx selector and three editable comparison distances.
 - Ten-row placement comparison with editable gains, distances, losses, rankings, and statuses.

@@ -158,6 +158,7 @@ The design is materially flat. Use layered dark tones, fine borders, and restrai
 - Inputs share the surface and border language, with amber focus treatment.
 - Status chips are concise, high contrast, and use semantic colours.
 - The live link animation and received-power result use the same semantic status colour: green for acceptable communication, amber for weak links, red for no-link or interference conditions, blue for safely below the interference threshold, and muted blue-gray for invalid input.
+- The receiver meter changes its second reference with the selected objective: required receive level (sensitivity plus fade-margin target) for desired communication, or interference threshold for avoidance.
 - Objective selectors use a neutral navy active state so they do not imply any RF status.
 - Charts use amber for received power, blue for sensitivity, and red for interference thresholds.
 - The live Tx-to-Rx graphic uses antenna endpoints, a warm link path, and compact loss readouts.
