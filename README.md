@@ -1,6 +1,6 @@
 # Friis RF Link & Interference Calculator
 
-A browser-based RF link-budget and interference-screening tool using the Friis free-space model. **Web Version 1.2** is based on **workbook Version 3** and adds a live visual Tx-to-Rx link view alongside the objective-based RF screening tools.
+A browser-based RF link-budget and interference-screening tool using the Friis free-space model. **Web Version 1.3** is based on **workbook Version 3** and combines its objective-based RF screening tools with a Raycast-inspired dark working interface.
 
 **Live calculator:** [iliketolie.github.io/friis-rf-calculator](https://iliketolie.github.io/friis-rf-calculator/)
 
@@ -14,6 +14,7 @@ A browser-based RF link-budget and interference-screening tool using the Friis f
 - Ten-row placement comparison with editable gains, distances, losses, rankings, and statuses.
 - Automatic device-local saving plus JSON scenario import/export.
 - Responsive layout for desktop, tablet, and mobile browsers.
+- Raycast-inspired command-style interface with Inter typography, near-black surface hierarchy, hairline borders, high-contrast actions, and accessible status colours.
 - Automated tests against known Version 3 workbook results.
 
 The objective toggle changes status interpretation only; it does not change the Friis power calculation. The web version intentionally does **not** include the Version 4 antenna-pattern and off-axis-gain model.
