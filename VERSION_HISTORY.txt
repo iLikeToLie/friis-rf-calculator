@@ -164,3 +164,28 @@ Key changes:
 Calculation scope:
 Version 1.3 is an interface release. It does not change received-power, margin,
 sweep, placement-ranking, or objective-status calculations.
+
+-------------------------------------------------------------------------------
+Web Version 1.31 (based on workbook Version 3)
+Deployment: https://iliketolie.github.io/friis-rf-calculator/
+Date: 2026-09-24
+
+Function:
+Applied the approved science-forward mission-control design concept.
+
+Key changes:
+- Replaced the Raycast-inspired styling with the approved CME Tracker visual
+  language: deep-space canvas, solar-amber emphasis, cool blue-gray data layers,
+  and monospaced editorial typography.
+- Reworked navigation into a compact horizontal instrument bar.
+- Positioned the live Tx-to-Rx geometry and received-power results as the primary
+  calculator workspace on desktop while retaining responsive stacking.
+- Restyled inputs, objective controls, status badges, threshold meter, charts,
+  tables, placement comparison, and guide pages consistently.
+- Updated chart colours so received power, sensitivity, and interference retain
+  distinct amber, blue, and red meanings.
+- Preserved all Version 1.3 calculator functionality and scenario compatibility.
+
+Calculation scope:
+Version 1.31 is a visual and layout release. It does not change received-power,
+margin, sweep, placement-ranking, or objective-status calculations.
